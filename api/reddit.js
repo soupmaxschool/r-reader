@@ -1,38 +1,50 @@
-export default async function handler(req, res) {
-  const target = req.query.url;
+import * as cheerio from "cheerio";
 
-  if (!target) {
-    return res.status(400).json({ error: "Missing ?url=" });
+export default async function handler(req, res) {
+  const sub = req.query.sub;
+  const sort = req.query.sort || "hot";
+
+  if (!sub) {
+    return res.status(400).json({ error: "Missing ?sub=" });
   }
+
+  const target = `https://www.reddit.com/r/${sub}/${sort}/`;
 
   try {
     const response = await fetch(target, {
-      method: "GET",
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Dest": "document"
-      },
-      redirect: "follow"
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
     });
 
-    const text = await response.text();
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
-    // If Reddit returned HTML, not JSON
-    if (text.trim().startsWith("<")) {
-      return res.status(403).json({
-        error: "Reddit blocked JSON access for this subreddit."
-      });
-    }
+    const posts = [];
 
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).send(text);
+    $("div[data-testid='post-container']").each((i, el) => {
+      const title = $(el).find("h3").text();
+      const author = $(el).find("a[data-testid='post_author_link']").text();
+      const score = $(el).find("div[data-click-id='score']").text();
+      const comments = $(el).find("span:contains('comments')").text();
+      const link = "https://reddit.com" + $(el).find("a[data-click-id='body']").attr("href");
+
+      if (title) {
+        posts.push({
+          title,
+          author,
+          score,
+          comments,
+          link
+        });
+      }
+    });
+
+    res.status(200).json({ posts });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Proxy fetch failed" });
+    res.status(500).json({ error: "Scrape failed" });
   }
 }
