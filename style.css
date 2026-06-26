@@ -13,7 +13,7 @@
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: sans-serif;
+  font-family: system-ui, sans-serif;
   margin: 0;
 }
 
@@ -26,14 +26,22 @@ header {
   top: 0;
 }
 
+main {
+  padding: 10px;
+}
+
 .post {
   background: var(--card);
-  margin: 10px;
+  margin: 10px 0;
   padding: 15px;
   border-radius: 8px;
   cursor: pointer;
 }
 
 .post:hover {
-  opacity: 0.8;
+  opacity: 0.85;
+}
+
+.loading {
+  padding: 20px;
 }
