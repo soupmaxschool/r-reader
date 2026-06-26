@@ -4,23 +4,41 @@ const postsEl = document.getElementById("posts");
 const darkToggle = document.getElementById("darkToggle");
 
 document.getElementById("loadBtn").onclick = loadPosts;
-darkToggle.onclick = () => document.body.classList.toggle("dark");
+
+// dark mode persistence
+if (localStorage.getItem("theme") === "dark") {
+  document.body.classList.add("dark");
+}
+darkToggle.onclick = () => {
+  document.body.classList.toggle("dark");
+  localStorage.setItem(
+    "theme",
+    document.body.classList.contains("dark") ? "dark" : "light"
+  );
+};
 
 async function loadPosts() {
   const sub = input.value.trim();
   if (!sub) return;
 
-  postsEl.innerHTML = "Loading…";
+  postsEl.innerHTML = `<div class="loading">Loading…</div>`;
 
-  const url = `https://www.reddit.com/r/${sub}/${sort.value}.json`;
+  const redditUrl = `https://www.reddit.com/r/${sub}/${sort.value}.json`;
+  const proxyUrl = `/api/reddit?url=${encodeURIComponent(redditUrl)}`;
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error("Bad response");
     const data = await res.json();
 
-    postsEl.innerHTML = "";
+    const children = data?.data?.children || [];
+    if (!children.length) {
+      postsEl.innerHTML = `<div>No posts found or subreddit restricted.</div>`;
+      return;
+    }
 
-    data.data.children.forEach(({ data: p }) => {
+    postsEl.innerHTML = "";
+    children.forEach(({ data: p }) => {
       const div = document.createElement("div");
       div.className = "post";
       div.innerHTML = `
@@ -31,7 +49,11 @@ async function loadPosts() {
       postsEl.appendChild(div);
     });
   } catch (e) {
-    postsEl.innerHTML = "Failed to load subreddit.";
+    console.error(e);
+    postsEl.innerHTML = `
+      <div>Failed to load subreddit via proxy.</div>
+      <button onclick="loadPosts()">Retry</button>
+    `;
   }
 }
 
@@ -40,10 +62,14 @@ function openPost(post) {
     <div class="post">
       <h2>${post.title}</h2>
       ${post.selftext_html ? decode(post.selftext_html) : ""}
-      ${post.url && post.url.match(/\.(jpg|png|gif)$/)
-        ? `<img src="${post.url}" style="max-width:100%">`
-        : ""}
-      <p><a href="https://reddit.com${post.permalink}" target="_blank">Open on Reddit</a></p>
+      ${
+        post.url && post.url.match(/\.(jpg|png|gif)$/)
+          ? `<img src="${post.url}" style="max-width:100%">`
+          : ""
+      }
+      <p><a href="https://reddit.com${post.permalink}" target="_blank">
+        Open on Reddit
+      </a></p>
     </div>
   `;
 }
