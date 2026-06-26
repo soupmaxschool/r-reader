@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reddit Viewer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Reddit Viewer</h1>
+    <input id="subredditInput" placeholder="Enter subreddit (e.g. javascript)" />
+    <select id="sortSelect">
+      <option value="hot">Hot</option>
+      <option value="new">New</option>
+      <option value="top">Top</option>
+    </select>
+    <button id="loadBtn">Load</button>
+    <button id="darkToggle">🌙</button>
+  </header>
+
+  <main id="posts"></main>
+
+  <script src="app.js"></script>
+</body>
+</html>
