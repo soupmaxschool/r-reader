@@ -6,18 +6,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing ?sub=" });
   }
 
-  const mirror = `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=25`;
+  // PullPush mirror (Pushshift-like)
+  // sort is handled via 'sort' param: "desc" by default on created_utc
+  const mirrorUrl = `https://api.pullpush.io/reddit/search/submission/?subreddit=${encodeURIComponent(
+    sub
+  )}&size=25&sort=desc`;
 
   try {
-    const response = await fetch(mirror, {
+    const response = await fetch(mirrorUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0"
       }
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      return res.status(502).json({ error: "Mirror returned bad status" });
+    }
 
-    res.status(200).json({ posts: data.data });
+    const data = await response.json();
+    const posts = data.data || [];
+
+    res.status(200).json({ posts });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Mirror fetch failed" });
