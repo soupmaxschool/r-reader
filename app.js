@@ -1,5 +1,4 @@
 const input = document.getElementById("subredditInput");
-const sort = document.getElementById("sortSelect");
 const postsEl = document.getElementById("posts");
 const darkToggle = document.getElementById("darkToggle");
 
@@ -23,36 +22,42 @@ async function loadPosts() {
 
   postsEl.innerHTML = `<div class="loading">Loading…</div>`;
 
-  const proxyUrl = `/api/reddit?sub=${encodeURIComponent(sub)}&sort=${encodeURIComponent(
-    sort.value
-  )}`;
+  const proxyUrl = `/api/reddit?sub=${encodeURIComponent(sub)}`;
 
   try {
     const res = await fetch(proxyUrl);
     const data = await res.json();
 
-    if (!data.posts || !data.posts.length) {
-      postsEl.innerHTML = `<div>No posts found or subreddit blocked.</div>`;
+    const posts = data.posts || [];
+    if (!posts.length) {
+      postsEl.innerHTML = `<div>No posts found for this subreddit.</div>`;
       return;
     }
 
     postsEl.innerHTML = "";
-    data.posts.forEach(p => {
+    posts.forEach(p => {
       const div = document.createElement("div");
       div.className = "post";
+
+      const title = p.title || "(no title)";
+      const author = p.author || "unknown";
+      const score = p.score || p.ups || 0;
+      const comments = p.num_comments || 0;
+      const link = p.full_link || p.url || null;
+
       div.innerHTML = `
-        <h2>${p.title}</h2>
-        <p>👍 ${p.score} • 💬 ${p.comments} • u/${p.author}</p>
+        <h2>${title}</h2>
+        <p>👍 ${score} • 💬 ${comments} • u/${author}</p>
       `;
       div.onclick = () => {
-        if (p.link) window.open(p.link, "_blank");
+        if (link) window.open(link, "_blank");
       };
       postsEl.appendChild(div);
     });
   } catch (e) {
     console.error(e);
     postsEl.innerHTML = `
-      <div>Scrape failed. Try again or another subreddit.</div>
+      <div>Failed to load from mirror. Try again or another subreddit.</div>
       <button onclick="loadPosts()">Retry</button>
     `;
   }
