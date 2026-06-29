@@ -1,30 +1,29 @@
+import Parser from "rss-parser";
+
+const parser = new Parser();
+
 export default async function handler(req, res) {
   const sub = req.query.sub;
-  const sort = req.query.sort || "new";
-
   if (!sub) {
     return res.status(400).json({ error: "Missing ?sub=" });
   }
 
-  // PullPush search endpoint (works from Vercel)
-  const query = `subreddit:${sub}`;
-  const url = `https://api.pullpush.io/reddit/search/?q=${encodeURIComponent(query)}&size=25&sort=desc`;
+  const url = `https://www.reddit.com/r/${sub}/.rss`;
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
+    const feed = await parser.parseURL(url);
 
-    if (!response.ok) {
-      return res.status(502).json({ error: "Mirror returned bad status" });
-    }
+    const posts = feed.items.map(item => ({
+      title: item.title,
+      author: item.author,
+      link: item.link,
+      date: item.pubDate,
+      content: item.contentSnippet
+    }));
 
-    const data = await response.json();
-    res.status(200).json({ posts: data.data });
+    res.status(200).json({ posts });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Mirror fetch failed" });
+    res.status(500).json({ error: "RSS fetch failed" });
   }
 }
