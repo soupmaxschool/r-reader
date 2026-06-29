@@ -1,17 +1,25 @@
 export default async function handler(req, res) {
-  const sub = req.query.sub || "javascript";
-  const sort = req.query.sort || "hot";
+  const sub = req.query.sub;
+  const sort = req.query.sort || "new";
 
-  const target = `https://old.reddit.com/r/${sub}/${sort}/`;
+  if (!sub) {
+    return res.status(400).json({ error: "Missing ?sub=" });
+  }
 
-  const response = await fetch(target, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"
-    }
-  });
+  const mirror = `https://api.pullpush.io/reddit/search/submission/?subreddit=${sub}&size=25`;
 
-  const html = await response.text();
+  try {
+    const response = await fetch(mirror, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
 
-  // TEMP: return first 2000 chars so we can inspect
-  res.status(200).send(html.slice(0, 2000));
+    const data = await response.json();
+
+    res.status(200).json({ posts: data.data });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Mirror fetch failed" });
+  }
 }
