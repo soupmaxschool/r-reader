@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing ?sub=" });
   }
 
-  const target = `https://www.reddit.com/r/${sub}/${sort}/`;
+  const target = `https://old.reddit.com/r/${sub}/${sort}/`;
 
   try {
     const response = await fetch(target, {
@@ -20,16 +20,16 @@ export default async function handler(req, res) {
     const html = await response.text();
 
     const posts = [];
-    const parts = html.split('data-testid="post-container"');
+    const items = html.split('<div class="thing');
 
-    for (let i = 1; i < parts.length; i++) {
-      const chunk = parts[i];
+    for (let i = 1; i < items.length; i++) {
+      const chunk = items[i];
 
-      const titleMatch = chunk.match(/<h3[^>]*>([^<]+)<\/h3>/);
-      const authorMatch = chunk.match(/data-testid="post_author_link"[^>]*>([^<]+)<\/a>/);
-      const scoreMatch = chunk.match(/data-click-id="score"[^>]*>([^<]+)<\/div>/);
+      const titleMatch = chunk.match(/class="title[^"]*"[^>]*>([^<]+)</);
+      const authorMatch = chunk.match(/class="author[^"]*"[^>]*>([^<]+)</);
+      const scoreMatch = chunk.match(/class="score[^"]*"[^>]*>([^<]+)</);
       const commentsMatch = chunk.match(/(\d+)\s+comments/);
-      const linkMatch = chunk.match(/data-click-id="body"[^>]*href="([^"]+)"/);
+      const linkMatch = chunk.match(/class="title[^"]*"[^>]*href="([^"]+)"/);
 
       const title = titleMatch ? titleMatch[1] : null;
       if (!title) continue;
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
         author: authorMatch ? authorMatch[1] : "unknown",
         score: scoreMatch ? scoreMatch[1] : "0",
         comments: commentsMatch ? commentsMatch[1] : "0",
-        link: linkMatch ? "https://reddit.com" + linkMatch[1] : null
+        link: linkMatch ? linkMatch[1] : null
       });
     }
 
