@@ -1,5 +1,3 @@
-import * as cheerio from "cheerio";
-
 export default async function handler(req, res) {
   const sub = req.query.sub;
   const sort = req.query.sort || "hot";
@@ -20,27 +18,30 @@ export default async function handler(req, res) {
     });
 
     const html = await response.text();
-    const $ = cheerio.load(html);
 
     const posts = [];
+    const parts = html.split('data-testid="post-container"');
 
-    $("div[data-testid='post-container']").each((i, el) => {
-      const title = $(el).find("h3").text();
-      const author = $(el).find("a[data-testid='post_author_link']").text();
-      const score = $(el).find("div[data-click-id='score']").text();
-      const comments = $(el).find("span:contains('comments')").text();
-      const link = "https://reddit.com" + $(el).find("a[data-click-id='body']").attr("href");
+    for (let i = 1; i < parts.length; i++) {
+      const chunk = parts[i];
 
-      if (title) {
-        posts.push({
-          title,
-          author,
-          score,
-          comments,
-          link
-        });
-      }
-    });
+      const titleMatch = chunk.match(/<h3[^>]*>([^<]+)<\/h3>/);
+      const authorMatch = chunk.match(/data-testid="post_author_link"[^>]*>([^<]+)<\/a>/);
+      const scoreMatch = chunk.match(/data-click-id="score"[^>]*>([^<]+)<\/div>/);
+      const commentsMatch = chunk.match(/(\d+)\s+comments/);
+      const linkMatch = chunk.match(/data-click-id="body"[^>]*href="([^"]+)"/);
+
+      const title = titleMatch ? titleMatch[1] : null;
+      if (!title) continue;
+
+      posts.push({
+        title,
+        author: authorMatch ? authorMatch[1] : "unknown",
+        score: scoreMatch ? scoreMatch[1] : "0",
+        comments: commentsMatch ? commentsMatch[1] : "0",
+        link: linkMatch ? "https://reddit.com" + linkMatch[1] : null
+      });
+    }
 
     res.status(200).json({ posts });
   } catch (err) {
